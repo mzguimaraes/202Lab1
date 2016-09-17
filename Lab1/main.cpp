@@ -7,6 +7,22 @@
 //
 
 #include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+struct symbol {
+    string name;
+    int absAddress;
+};
+
+struct module {
+    int moduleNum;
+    int absAddress;
+    int words[];
+    symbol* uses[];
+    
+};
 
 int main(int argc, const char * argv[]) {
     // insert code here...
