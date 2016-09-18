@@ -17,13 +17,14 @@ struct symbol {
     int absAddress;
     
     symbol(string name, int absAddress) : name(name), absAddress(absAddress) {};
+    symbol() {};
 };
 
 struct module {
     int moduleNum;
     int absAddress;
     vector<int> words;
-    symbol* uses[];
+    vector<string> uses;
     
     //module(int moduleNum, int absAddress) : moduleNum(moduleNum), absAddress(absAddress) {};
 };
@@ -52,6 +53,13 @@ int main(int argc, const char * argv[]) {
 
     passOne(input, symbolTable, modules);
     
+    //test
+//    for (int i = 0; i < symbolTable->size(); i++) {
+//        symbol sym = symbolTable->at(i);
+//        cout << sym.name << ": " << sym.absAddress << endl;
+//    }
+//    cout << "there are " << modules->size() << " modules" << endl;
+    
     //open output file, close input
     input.close();
     //pass 2:
@@ -76,7 +84,44 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
     int currAddress = 0;
     
     for (int i = 0; i < totalNumMods; i++) {
+        //create module struct, add some values to it
+        module mod;
+        mod.moduleNum = i;
+        mod.absAddress = currAddress;
         
+        //read and create symbols in this module
+        int numDefs;
+        input >> numDefs;
+        for (int j = 0; j < numDefs; j++) {
+            symbol sym;
+            input >> sym.name;
+            int relAddress;
+            input >> relAddress;
+            sym.absAddress = relAddress + mod.absAddress;
+            symbolTable->push_back(sym);
+        }
+        
+        //fill in rest of mod values
+        int numUses;
+        input >> numUses;
+        for (int j = 0; j < numUses; j++) {
+            string usedSymbol;
+            input >> usedSymbol;
+            
+            mod.uses.push_back(usedSymbol);
+        }
+        
+        int numWords;
+        input >> numWords;
+        for (int j = 0; j < numWords; j++) {
+            int word;
+            input >> word;
+            
+            mod.words.push_back(word);
+        }
+        
+        currAddress += numWords;
+        modules->push_back(mod);
     }
 }
 
