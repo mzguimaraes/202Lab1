@@ -24,7 +24,8 @@
 
 /* Begin PBXFileReference section */
 		2C0C970A1D8DF2530070E1CF /* Lab1 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Lab1; sourceTree = BUILT_PRODUCTS_DIR; };
-		2C0C970D1D8DF2530070E1CF /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		2C0C970D1D8DF2530070E1CF /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = Lab1/main.cpp; sourceTree = "<group>"; };
+		2C0C97151D8E08F00070E1CF /* input1.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = input1.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,8 +42,10 @@
 		2C0C97011D8DF2530070E1CF = {
 			isa = PBXGroup;
 			children = (
+				2C0C97151D8E08F00070E1CF /* input1.txt */,
 				2C0C970C1D8DF2530070E1CF /* Lab1 */,
 				2C0C970B1D8DF2530070E1CF /* Products */,
+				2C0C970D1D8DF2530070E1CF /* main.cpp */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,7 +60,6 @@
 		2C0C970C1D8DF2530070E1CF /* Lab1 */ = {
 			isa = PBXGroup;
 			children = (
-				2C0C970D1D8DF2530070E1CF /* main.cpp */,
 			);
 			path = Lab1;
 			sourceTree = "<group>";
