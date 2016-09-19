@@ -53,12 +53,11 @@ int main(int argc, const char * argv[]) {
 
     passOne(input, symbolTable, modules);
     
-    //test
-//    for (int i = 0; i < symbolTable->size(); i++) {
-//        symbol sym = symbolTable->at(i);
-//        cout << sym.name << ": " << sym.absAddress << endl;
-//    }
-//    cout << "there are " << modules->size() << " modules" << endl;
+    //print to stdout
+    for (int i = 0; i < symbolTable->size(); i++) {
+        symbol sym = symbolTable->at(i);
+        cout << sym.name << ": " << sym.absAddress << endl;
+    }
     
     //open output file, close input
     input.close();
