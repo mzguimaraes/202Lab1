@@ -10,6 +10,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <iomanip>
 using namespace std;
 
 struct symbol {
@@ -30,6 +31,8 @@ struct module {
 };
 
 void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modules);
+void passTwo(vector<symbol>* symbolTable, vector<module>* modules);
+void parseWord(int word, vector<symbol>* symbolTable, vector<string> uses, int baseAddress);
 
 int main(int argc, const char * argv[]) {
     //get input filename, open
@@ -54,19 +57,18 @@ int main(int argc, const char * argv[]) {
     passOne(input, symbolTable, modules);
     
     //print to stdout
+    cout << "Symbol Table:" << endl;
     for (int i = 0; i < symbolTable->size(); i++) {
         symbol sym = symbolTable->at(i);
         cout << sym.name << ": " << sym.absAddress << endl;
     }
+    cout << endl;
     
-    //open output file, close input
+    // close input
     input.close();
-    //pass 2:
-        //for each module:
-            //print base address
-            //for each word in words[]:
-                //resolve address and print to output
-    //close output
+    
+    passTwo(symbolTable, modules);
+    
     //delete structs
 }
 
@@ -124,6 +126,67 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
     }
 }
 
+void passTwo(vector<symbol>* symbolTable, vector<module>* modules) {
+    //pass 2:
+    //for each module:
+    //print base address
+    //for each word in words[]:
+    //resolve address and print to output
+    cout << "Memory Map:" << endl;
+    for (int i = 0; i < modules->size(); i ++) {
+        module mod = modules->at(i);
+        cout << "+" << mod.absAddress << endl;
+        for (int j = 0; j < mod.words.size(); j ++) {
+            cout << " " << j + mod.absAddress << ": ";
+            //parse word
+            parseWord(mod.words.at(j), symbolTable, mod.uses, mod.absAddress);
+            cout << endl;
+        }
+    }
+    
+}
+
+void parseWord(int word, vector<symbol>* symbolTable, vector<string> uses, int baseAddress) {
+    //5-digit word:
+    //digit 1: opcode
+    //digits 2-4: address
+    //digit 5: mode:
+        //1 = immediate, 2 = absolute, 3 = relative, 4 = external
+    int opcode = word / 10000;
+    int address = (word % 10000) / 10;
+    int mode = word % 10;
+    
+    if (mode == 1) {
+        //ignore
+    }
+    else if (mode == 2) {
+        //ignore
+    }
+    else if (mode == 3) {
+        address += baseAddress;
+        
+    }
+    else if (mode == 4) {
+        string symbolUsed = uses.at(address);
+        bool symbolFound = false;
+        for (int i = 0; i < symbolTable->size(); i ++) {
+            if (symbolTable->at(i).name == symbolUsed) {
+                address = symbolTable->at(i).absAddress;
+                symbolFound = true;
+            }
+        }
+        if (!symbolFound) {
+            cerr << "WARNING: symbol not found.  Using value 0";
+        }
+    }
+    else {
+        cerr << "WARNING: invalid address type" << endl;
+    }
+    
+    cout << opcode;
+    cout << setw(3) << setfill('0') << address;
+    //cout << opcode << " " << address << " " << mode;
+}
 
 
 
