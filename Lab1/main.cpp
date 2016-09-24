@@ -13,29 +13,39 @@
 #include <iomanip>
 using namespace std;
 
+const int MAX_ADDRESS = 600;
+
 struct symbol {
     string name;
     int absAddress;
+    int moduleNum;
+    bool used;
     
-    symbol(string name, int absAddress) : name(name), absAddress(absAddress) {};
-    symbol() {};
+    symbol(string name, int absAddress, int modNum) : name(name), absAddress(absAddress), used(false), moduleNum(modNum) {};
+    symbol() : used(false) {};
+};
+
+struct useListEntry {
+    string symbolName;
+    bool used;
+    useListEntry() : used(false) {};
 };
 
 struct module {
     int moduleNum;
     int absAddress;
     vector<int> words;
-    vector<string> uses;
-    
-    //module(int moduleNum, int absAddress) : moduleNum(moduleNum), absAddress(absAddress) {};
+    vector<useListEntry> uses;
 };
 
-void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modules);
-void passTwo(vector<symbol>* symbolTable, vector<module>* modules);
-void parseWord(int word, vector<symbol>* symbolTable, vector<string> uses, int baseAddress);
+void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module*>* modules);
+void passTwo(vector<symbol>* symbolTable, vector<module*>* modules);
+void parseWord(const int word, vector<symbol>* symbolTable, module* mod);
+void checkForErrors(vector<symbol>* symbolTable, vector<module*>* modules);
 
 int main(int argc, const char * argv[]) {
-    //get input filename, open
+    cout << endl;
+
     if (argc != 2) {
         cerr << "ERROR: please provide exactly one argument specifying the input filename" << endl;
         exit(EXIT_FAILURE);
@@ -46,17 +56,11 @@ int main(int argc, const char * argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    //test if file is opening
-//    string line;
-//    while (getline(input, line)) {
-//        cout << line << endl;
-//    }
     vector<symbol>* symbolTable = new vector<symbol>();
-    vector<module>* modules = new vector<module>();
+    vector<module*>* modules = new vector<module*>();
 
     passOne(input, symbolTable, modules);
     
-    //print to stdout
     cout << "Symbol Table:" << endl;
     for (int i = 0; i < symbolTable->size(); i++) {
         symbol sym = symbolTable->at(i);
@@ -64,15 +68,22 @@ int main(int argc, const char * argv[]) {
     }
     cout << endl;
     
-    // close input
     input.close();
     
     passTwo(symbolTable, modules);
     
+    cout << endl;
+    
+    checkForErrors(symbolTable, modules);
+    
     //delete structs
+    
+    modules->clear();
+    delete symbolTable;
+    delete modules;
 }
 
-void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modules) {
+void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module*>* modules) {
     //pass 1:
         //for each module:
             //create module, add to modules
@@ -86,20 +97,33 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
     
     for (int i = 0; i < totalNumMods; i++) {
         //create module struct, add some values to it
-        module mod;
-        mod.moduleNum = i;
-        mod.absAddress = currAddress;
+        module* mod = new module();
+        mod->moduleNum = i;
+        mod->absAddress = currAddress;
         
         //read and create symbols in this module
         int numDefs;
         input >> numDefs;
         for (int j = 0; j < numDefs; j++) {
             symbol sym;
+            sym.moduleNum = mod->moduleNum;
             input >> sym.name;
             int relAddress;
             input >> relAddress;
-            sym.absAddress = relAddress + mod.absAddress;
-            symbolTable->push_back(sym);
+            sym.absAddress = relAddress + mod->absAddress;
+            bool alreadyDefined = false;
+            for (int k = 0; k < symbolTable->size(); k ++) {
+                if (symbolTable->at(k).name == sym.name) {
+                    alreadyDefined = true;
+                }
+            }
+            if (alreadyDefined) {
+                cerr << "ERROR: multiple definitions of " << sym.name << ".  Using first definition. " << endl;
+                
+            }
+            else {
+                symbolTable->push_back(sym);
+            }
         }
         
         //fill in rest of mod values
@@ -109,7 +133,9 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
             string usedSymbol;
             input >> usedSymbol;
             
-            mod.uses.push_back(usedSymbol);
+            useListEntry ule;
+            ule.symbolName = usedSymbol;
+            mod->uses.push_back(ule);
         }
         
         int numWords;
@@ -118,7 +144,17 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
             int word;
             input >> word;
             
-            mod.words.push_back(word);
+            mod->words.push_back(word);
+        }
+        
+        for (int k = 0; k < symbolTable->size(); k ++) {
+            symbol sym = symbolTable->at(k);
+            if (sym.moduleNum == mod->moduleNum) {
+                if (sym.absAddress < mod->absAddress || sym.absAddress > mod->absAddress + numWords - 1) {
+                    cerr << "WARNING: symbol " << sym.name << " address out of range.  Using module's base address. " << endl;
+                    sym.absAddress = mod->absAddress;
+                }
+            }
         }
         
         currAddress += numWords;
@@ -126,7 +162,7 @@ void passOne(ifstream& input, vector<symbol>* symbolTable, vector<module>* modul
     }
 }
 
-void passTwo(vector<symbol>* symbolTable, vector<module>* modules) {
+void passTwo(vector<symbol>* symbolTable, vector<module*>* modules) {
     //pass 2:
     //for each module:
     //print base address
@@ -134,19 +170,18 @@ void passTwo(vector<symbol>* symbolTable, vector<module>* modules) {
     //resolve address and print to output
     cout << "Memory Map:" << endl;
     for (int i = 0; i < modules->size(); i ++) {
-        module mod = modules->at(i);
-        cout << "+" << mod.absAddress << endl;
-        for (int j = 0; j < mod.words.size(); j ++) {
-            cout << " " << j + mod.absAddress << ": ";
+        module* mod = modules->at(i);
+        //cout << "+" << mod->absAddress << endl;
+        for (int j = 0; j < mod->words.size(); j ++) {
+            cout << " " << j + mod->absAddress << ": ";
             //parse word
-            parseWord(mod.words.at(j), symbolTable, mod.uses, mod.absAddress);
+            parseWord(mod->words.at(j), symbolTable, mod);
             cout << endl;
         }
     }
-    
 }
 
-void parseWord(int word, vector<symbol>* symbolTable, vector<string> uses, int baseAddress) {
+void parseWord(const int word, vector<symbol>* symbolTable, module* mod) {
     //5-digit word:
     //digit 1: opcode
     //digits 2-4: address
@@ -160,32 +195,69 @@ void parseWord(int word, vector<symbol>* symbolTable, vector<string> uses, int b
         //ignore
     }
     else if (mode == 2) {
-        //ignore
+        if (address > MAX_ADDRESS) {
+            cerr << "WARNING: Absolute address exceeds machine size; zero used. ";
+            address = 000;
+        }
     }
     else if (mode == 3) {
-        address += baseAddress;
+        address += mod->absAddress;
+        if (address > mod->absAddress + mod->words.size()) {
+            cerr << "WARNING: Relative address exceeds module size; zero used. ";
+            address = 000;
+        }
         
     }
     else if (mode == 4) {
-        string symbolUsed = uses.at(address);
-        bool symbolFound = false;
-        for (int i = 0; i < symbolTable->size(); i ++) {
-            if (symbolTable->at(i).name == symbolUsed) {
-                address = symbolTable->at(i).absAddress;
-                symbolFound = true;
-            }
+        if (address > mod->uses.size() - 1) {
+            cerr << "WARNING: address " << address << " out of range of use list; treated as immediate. ";
         }
-        if (!symbolFound) {
-            cerr << "WARNING: symbol not found.  Using value 0";
+        else {
+            useListEntry ule = mod->uses.at(address);
+            string symbolUsed = ule.symbolName;
+            bool symbolFound = false;
+            
+            for (int i = 0; i < symbolTable->size(); i ++) {
+                if (symbolTable->at(i).name == symbolUsed) {
+                    symbolFound = true;
+                    symbolTable->at(i).used = true;
+                    ule.used = true;
+                    mod->uses.at(address) = ule;
+                    address = symbolTable->at(i).absAddress;
+                    break;
+                }
+            }
+            
+            if (!symbolFound) {
+                cerr << "WARNING: symbol " << symbolUsed << " not defined.  Using value 0. ";
+                address = 000;
+            }
         }
     }
     else {
-        cerr << "WARNING: invalid address type" << endl;
+        cerr << "WARNING: invalid address type. " << endl;
     }
     
     cout << opcode;
     cout << setw(3) << setfill('0') << address;
-    //cout << opcode << " " << address << " " << mode;
+    
+}
+
+void checkForErrors(vector<symbol>* symbolTable, vector<module*>* modules) {
+    for (int i = 0; i < symbolTable->size(); i ++) {
+        if (!symbolTable->at(i).used) {
+            cerr << "WARNING: " << symbolTable->at(i).name << " was defined in module " << symbolTable->at(i).moduleNum << " but never used. " << endl;
+        }
+    }
+    
+    for (int i = 0; i < modules->size(); i ++) {
+        module* mod = modules->at(i);
+        for (int j = 0; j < mod->uses.size(); j ++) {
+            if (!mod->uses.at(j).used) {
+                cerr << "WARNING: In module " << mod->moduleNum << " " << mod->uses.at(j).symbolName << " is on use list but isn't used. " << endl;
+            }
+        }
+    }
 }
 
 
