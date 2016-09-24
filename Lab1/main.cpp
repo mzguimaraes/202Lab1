@@ -13,7 +13,7 @@
 #include <iomanip>
 using namespace std;
 
-const int MAX_ADDRESS = 600;
+const int MAX_ADDRESS = 599;
 
 struct symbol {
     string name;
@@ -230,6 +230,8 @@ void parseWord(const int word, vector<symbol>* symbolTable, module* mod) {
             
             if (!symbolFound) {
                 cerr << "WARNING: symbol " << symbolUsed << " not defined.  Using value 0. ";
+                ule.used = true;
+                mod->uses.at(address) = ule;
                 address = 000;
             }
         }
