@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <iomanip>
+#include <cstdlib>
 using namespace std;
 
 const int MAX_ADDRESS = 599;
